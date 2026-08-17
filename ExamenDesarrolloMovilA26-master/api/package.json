@@ -1,0 +1,13 @@
+{
+  "name": "veterinaria-lemas-notifications",
+  "version": "1.0.0",
+  "description": "Backend para envio de notificaciones push (FCM) - Veterinaria Lemas",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "firebase-admin": "^12.3.0"
+  }
+}

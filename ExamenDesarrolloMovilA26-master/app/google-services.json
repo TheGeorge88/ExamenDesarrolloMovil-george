@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "285343958779",
+    "project_id": "veterinarialemas",
+    "storage_bucket": "veterinarialemas.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:285343958779:android:140cd6fa9153f433ed925e",
+        "android_client_info": {
+          "package_name": "com.example.veterinarialemas"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCV-g2TbcEVOg3n4z_s018ryXLQWbqa1ew"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

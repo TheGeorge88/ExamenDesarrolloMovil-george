@@ -1,0 +1,13 @@
+services:
+  notifications-api:
+    build: .
+    container_name: veterinaria-notifications
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./serviceAccountKey.json:/app/secrets/serviceAccountKey.json:ro
+      - notifications-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  notifications-data:

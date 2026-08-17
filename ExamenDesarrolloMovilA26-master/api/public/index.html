@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Veterinaria Lemas - Notificaciones Push</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f0f4f8; color: #1e293b; min-height: 100vh; padding: 2rem 1rem; }
+  .container { max-width: 900px; margin: 0 auto; }
+  h1 { color: #0f766e; margin-bottom: .25rem; }
+  .subtitle { color: #64748b; margin-bottom: 1.5rem; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: #fff; border-radius: 12px; padding: 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+  .card h2 { font-size: 1.1rem; margin-bottom: 1rem; color: #0f766e; }
+  label { display: block; font-size: .85rem; font-weight: 600; margin: .75rem 0 .25rem; }
+  input, textarea, select { width: 100%; padding: .55rem .7rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: .95rem; font-family: inherit; }
+  input:focus, textarea:focus, select:focus { outline: 2px solid #14b8a6; border-color: transparent; }
+  textarea { resize: vertical; min-height: 70px; }
+  button { margin-top: 1.25rem; width: 100%; padding: .7rem; background: #0f766e; color: #fff; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; }
+  button:hover { background: #115e59; }
+  button:disabled { background: #94a3b8; cursor: not-allowed; }
+  .hidden { display: none; }
+  #result { margin-top: 1rem; padding: .75rem; border-radius: 8px; font-size: .9rem; white-space: pre-wrap; }
+  .ok { background: #dcfce7; color: #166534; }
+  .err { background: #fee2e2; color: #991b1b; }
+  .device { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; border-bottom: 1px solid #e2e8f0; font-size: .85rem; gap: .5rem; }
+  .device .tok { color: #64748b; font-family: monospace; font-size: .72rem; word-break: break-all; }
+  .device button { width: auto; margin: 0; padding: .3rem .6rem; background: #dc2626; font-size: .75rem; }
+  .empty { color: #94a3b8; font-size: .9rem; }
+  .refresh { background: #475569; margin-top: .75rem; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🐾 Veterinaria Lemas</h1>
+  <p class="subtitle">Panel de envío de notificaciones push (Firebase Cloud Messaging)</p>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Configurar notificación</h2>
+      <form id="form">
+        <label for="title">Título *</label>
+        <input id="title" required maxlength="100" placeholder="Ej: Recordatorio de cita" />
+
+        <label for="body">Mensaje *</label>
+        <textarea id="body" required maxlength="500" placeholder="Ej: Tu mascota tiene cita mañana a las 10:00"></textarea>
+
+        <label for="imageUrl">URL de imagen (opcional)</label>
+        <input id="imageUrl" type="url" placeholder="https://..." />
+
+        <label for="data">Datos adicionales JSON (opcional)</label>
+        <textarea id="data" placeholder='{"pantalla": "citas", "idCita": "123"}'></textarea>
+
+        <label for="target">Destino</label>
+        <select id="target">
+          <option value="all">Todos los dispositivos registrados</option>
+          <option value="token">Un dispositivo (token)</option>
+          <option value="topic">Un tema (topic)</option>
+        </select>
+
+        <div id="tokenField" class="hidden">
+          <label for="token">Token del dispositivo</label>
+          <input id="token" placeholder="Token FCM del dispositivo" />
+        </div>
+        <div id="topicField" class="hidden">
+          <label for="topic">Nombre del topic</label>
+          <input id="topic" placeholder="Ej: promociones" />
+        </div>
+
+        <button type="submit" id="sendBtn">Enviar notificación</button>
+      </form>
+      <div id="result" class="hidden"></div>
+    </div>
+
+    <div class="card">
+      <h2>Dispositivos registrados</h2>
+      <div id="devices"><p class="empty">Cargando...</p></div>
+      <button class="refresh" onclick="loadDevices()">Actualizar lista</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+$('target').addEventListener('change', () => {
+  $('tokenField').classList.toggle('hidden', $('target').value !== 'token');
+  $('topicField').classList.toggle('hidden', $('target').value !== 'topic');
+});
+
+$('form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const result = $('result');
+  result.className = 'hidden';
+
+  let data = null;
+  const rawData = $('data').value.trim();
+  if (rawData) {
+    try { data = JSON.parse(rawData); }
+    catch { result.textContent = 'El JSON de datos adicionales no es válido'; result.className = 'err'; return; }
+  }
+
+  const payload = {
+    title: $('title').value.trim(),
+    body: $('body').value.trim(),
+    imageUrl: $('imageUrl').value.trim() || undefined,
+    data,
+    target: $('target').value,
+    token: $('token').value.trim() || undefined,
+    topic: $('topic').value.trim() || undefined,
+  };
+
+  $('sendBtn').disabled = true;
+  try {
+    const res = await fetch('/api/notifications/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const json = await res.json();
+    if (res.ok) {
+      result.textContent = '✅ Enviada correctamente\n' + JSON.stringify(json, null, 2);
+      result.className = 'ok';
+    } else {
+      result.textContent = '❌ Error: ' + (json.error || res.status);
+      result.className = 'err';
+    }
+  } catch (err) {
+    result.textContent = '❌ Error de red: ' + err.message;
+    result.className = 'err';
+  } finally {
+    $('sendBtn').disabled = false;
+  }
+});
+
+async function loadDevices() {
+  const el = $('devices');
+  try {
+    const devices = await (await fetch('/api/devices')).json();
+    if (!devices.length) { el.innerHTML = '<p class="empty">No hay dispositivos registrados aún. La app móvil debe llamar a POST /api/devices con su token FCM.</p>'; return; }
+    el.innerHTML = devices.map(d => `
+      <div class="device">
+        <div><strong>${d.name}</strong><div class="tok">${d.token}</div></div>
+        <button onclick="removeDevice('${d.token}')">Quitar</button>
+      </div>`).join('');
+  } catch { el.innerHTML = '<p class="empty">Error cargando dispositivos</p>'; }
+}
+
+async function removeDevice(token) {
+  await fetch('/api/devices/' + encodeURIComponent(token), { method: 'DELETE' });
+  loadDevices();
+}
+
+loadDevices();
+</script>
+</body>
+</html>

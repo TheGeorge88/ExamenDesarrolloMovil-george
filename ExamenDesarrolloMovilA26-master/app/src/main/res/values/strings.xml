@@ -1,0 +1,23 @@
+<resources>
+    <string name="app_name">VeterinariaLemas</string>
+    <string name="enter_user">Ingrese usuario</string>
+    <string name="enter_pass">Ingrese contrasena</string>
+    <string name="create_user">Crear usuario</string>
+    <string name="login">Ingresar</string>
+    <string name="save">Guardar</string>
+    <string name="medic_assistant">Asistencia medica</string>
+    <string name="barber">Peluqueria</string>
+    <string name="food">Comida</string>
+    <string name="navigation_drawer_open">Abrir menu de navegacion</string>
+    <string name="navigation_drawer_close">Cerrar menu de navegacion</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="nombre_duenio">Nombre del dueno</string>
+    <string name="nombre_mascota">Nombre mascota</string>
+    <string name="tipo_mascota">Tipo mascota</string>
+    <string name="raza_mascota">Raza mascota</string>
+    <string name="edad_mascota">Edad mascota</string>
+    <string name="guardar">Guardar</string>
+    <string name="sin_pacientes">Sin pacientes</string>
+    <string name="lista_paciente">Listado de pacientes</string>
+</resources>
