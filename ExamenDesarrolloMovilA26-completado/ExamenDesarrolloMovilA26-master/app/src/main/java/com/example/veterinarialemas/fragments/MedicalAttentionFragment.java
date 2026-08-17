@@ -128,20 +128,20 @@ public class MedicalAttentionFragment extends Fragment implements View.OnClickLi
     }
 
     private void mostrarListadoPaciente() {
-        // TODO (Tarea 4 - Navegacion): mostrar el listado de pacientes registrados.
-        // Debe abrir el dialogo PacienteListDialogFragment usando el
-        // FragmentManager del padre, con el tag "PacienteListDialogFragment",
-        // tal como se hace para el resto de los DialogFragment de la app.
+        new PacienteListDialogFragment().show(getParentFragmentManager(), "PacienteListDialogFragment");
     }
 
 
     private void showImagePreview() {
-        // TODO (Tarea 2 - Imagen): mostrar en pantalla la imagen seleccionada.
-        // 1) Verificar que imageUri no sea nulo.
-        // 2) Obtener un Bitmap a partir de imageUri usando
-        //    MediaStore.Images.Media.getBitmap(...).
-        // 3) Cargar ese Bitmap en imgCapturaImagen usando Glide.
-        // 4) Manejar la IOException que pueda lanzar getBitmap(...).
+        if (imageUri == null) {
+            return;
+        }
+        try {
+            bitmap = MediaStore.Images.Media.getBitmap(requireActivity().getContentResolver(), imageUri);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        Glide.with(this).load(bitmap).into(imgCapturaImagen);
     }
 
     @Override
@@ -154,11 +154,9 @@ public class MedicalAttentionFragment extends Fragment implements View.OnClickLi
     }
 
     private void openFileSystem() {
-        // TODO (Tarea 2 - Imagen): abrir el selector de imagenes del dispositivo.
-        // 1) Crear un Intent con accion Intent.ACTION_GET_CONTENT.
-        // 2) Configurar el tipo MIME como "image/*".
-        // 3) Lanzar el intent con imagePickerLauncher.launch(...), envuelto
-        //    en un Intent.createChooser(...) con el titulo "Selecciona la imagen".
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        intent.setType("image/*");
+        imagePickerLauncher.launch(Intent.createChooser(intent, "Selecciona la imagen"));
     }
 
     private void savePets() {
@@ -208,28 +206,50 @@ public class MedicalAttentionFragment extends Fragment implements View.OnClickLi
     }
 
     private void saveDB(String nameHosts, String namePets, String typePets, String razaPets, String agePets, String imageUrl) {
-        // TODO (Tarea 3 - Guardado en Firestore): persistir al paciente.
-        // 1) Crear un AsistenciaMedicaModels con nameHosts, namePets, typePets,
-        //    razaPets y agePets, y asignarle imageUrl con setUrlImagen(...).
-        // 2) Agregarlo a la coleccion "PACIENTES" de Firestore (db.collection(...).add(...)).
-        // 3) En addOnCompleteListener: ocultar loadingProgressIndicator, mostrar
-        //    btnGuardarMascota, y mostrar un Toast de exito + limpiar el formulario
-        //    (cleanFieldValue()) si exitoso.isSuccessful(), o un Toast de error si no.
-        // 4) En addOnFailureListener: imprimir el error y restaurar la visibilidad
-        //    de btnGuardarMascota / loadingProgressIndicator igual que en el paso 3.
+        AsistenciaMedicaModels asistencia = new AsistenciaMedicaModels(nameHosts, namePets, typePets, razaPets, agePets);
+        asistencia.setUrlImagen(imageUrl);
+
+        db.collection("PACIENTES")
+                .add(asistencia)
+                .addOnCompleteListener(exitoso -> {
+                    loadingProgressIndicator.setVisibility(View.GONE);
+                    btnGuardarMascota.setVisibility(View.VISIBLE);
+                    if (exitoso.isSuccessful()) {
+                        Toast.makeText(getContext(), "Se ha guardado la informacion", Toast.LENGTH_LONG).show();
+                        cleanFieldValue();
+                    } else {
+                        Toast.makeText(getContext(), "NO se ha guardado la informacion", Toast.LENGTH_LONG).show();
+                    }
+                })
+                .addOnFailureListener(error -> {
+                    error.printStackTrace();
+                    loadingProgressIndicator.setVisibility(View.GONE);
+                    btnGuardarMascota.setVisibility(View.VISIBLE);
+                });
     }
 
     private boolean validateFieldsNulls(String nameHosts, String namePets, String typePets, String razaPets, String agePets) {
-        // TODO (Tarea 1 - Validaciones): validar que ningun campo llegue vacio.
-        // Por cada campo vacio, asignar un mensaje de error al TextInputLayout
-        // correspondiente con setError("...") y retornar false de inmediato:
-        //   nameHosts  -> tilDuenio        ("El campo duenio es obligatorio")
-        //   namePets   -> tilNombreMascota ("El campo nombre es obligatorio")
-        //   typePets   -> tilTipoMascota   ("No ha seleccionado el tipo de mascota")
-        //   razaPets   -> tilRazaMascota   ("El campo raza es obligatorio")
-        //   agePets    -> tilEdadMascota   ("El campo edad es obligatorio")
-        // Si todos los campos tienen contenido, retornar true.
-        return false;
+        if (nameHosts.isEmpty()) {
+            tilDuenio.setError("El campo duenio es obligatorio");
+            return false;
+        }
+        if (namePets.isEmpty()) {
+            tilNombreMascota.setError("El campo nombre es obligatorio");
+            return false;
+        }
+        if (typePets.isEmpty()) {
+            tilTipoMascota.setError("No ha seleccionado el tipo de mascota");
+            return false;
+        }
+        if (razaPets.isEmpty()) {
+            tilRazaMascota.setError("El campo raza es obligatorio");
+            return false;
+        }
+        if (agePets.isEmpty()) {
+            tilEdadMascota.setError("El campo edad es obligatorio");
+            return false;
+        }
+        return true;
     }
 
 
@@ -243,13 +263,79 @@ public class MedicalAttentionFragment extends Fragment implements View.OnClickLi
     }
 
     private void cleanValuesWithError() {
-        // TODO (Tarea 5 - UX de errores): limpiar el error de cada campo apenas
-        // el usuario empiece a corregirlo.
-        // Para tieDuenio, tieNombreMascota, actTipoMascota, tieRazaMascota y
-        // tieEdadMascota, agregar un TextWatcher (addTextChangedListener) que,
-        // dentro de onTextChanged(...), verifique si el TextInputLayout asociado
-        // (tilDuenio, tilNombreMascota, tilTipoMascota, tilRazaMascota,
-        // tilEdadMascota respectivamente) tiene un error visible
-        // (getError() != null) y en ese caso lo limpie con setError(null).
+        tieDuenio.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                if (tilDuenio.getError() != null) {
+                    tilDuenio.setError(null);
+                }
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) { }
+        });
+
+        tieNombreMascota.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                if (tilNombreMascota.getError() != null) {
+                    tilNombreMascota.setError(null);
+                }
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) { }
+        });
+
+        actTipoMascota.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                if (tilTipoMascota.getError() != null) {
+                    tilTipoMascota.setError(null);
+                }
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) { }
+        });
+
+        tieRazaMascota.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                if (tilRazaMascota.getError() != null) {
+                    tilRazaMascota.setError(null);
+                }
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) { }
+        });
+
+        tieEdadMascota.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                if (tilEdadMascota.getError() != null) {
+                    tilEdadMascota.setError(null);
+                }
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) { }
+        });
     }
 }
